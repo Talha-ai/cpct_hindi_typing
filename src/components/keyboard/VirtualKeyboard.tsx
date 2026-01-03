@@ -5,8 +5,7 @@
  */
 
 import { ModifierState } from '@/types/keyboard.types';
-import { REMINGTON_GAIL_LAYOUT } from '@/data/keyboardMappings';
-import { findKeysForCharacter } from '@/utils/keyboardMapper';
+import { useKeyboardMapper } from '@/utils/keyboardMapper';
 import { Key } from './Key';
 import { cn } from '@/utils/cn';
 
@@ -15,7 +14,6 @@ interface VirtualKeyboardProps {
   pressedKeys?: Set<string>;
   nextCharacter?: string;
   showFingerGuide?: boolean;
-  size?: 'normal' | 'large' | 'small';
   className?: string;
 }
 
@@ -26,12 +24,15 @@ export function VirtualKeyboard({
   pressedKeys = new Set(),
   nextCharacter,
   showFingerGuide = true,
-  size = 'normal',
   className,
 }: VirtualKeyboardProps) {
+  // Use context-aware keyboard mapper
+  const mapper = useKeyboardMapper();
+  const { currentLayout } = mapper;
+
   // Find which key produces the next character
   const nextKeyInfo = nextCharacter
-    ? findKeysForCharacter(nextCharacter).find(
+    ? mapper.findKeysForCharacter(nextCharacter).find(
         (info) => info.modifierState === modifierState
       )
     : null;
@@ -49,12 +50,12 @@ export function VirtualKeyboard({
 
       <div className="flex justify-center">
         <div className="bg-gray-200 dark:bg-gray-800 p-4 rounded-xl space-y-2">
-          {REMINGTON_GAIL_LAYOUT.rows.map((row, rowIndex) => (
+          {currentLayout.rows.map((row, rowIndex) => (
             <div
               key={rowIndex}
               className="grid gap-1"
               style={{
-                gridTemplateColumns: getGridTemplateForRow(rowIndex),
+                gridTemplateColumns: getGridTemplateForRow(rowIndex, currentLayout.name),
                 gridAutoColumns: KEY_UNIT,
               }}
             >
@@ -76,8 +77,18 @@ export function VirtualKeyboard({
   );
 }
 
-function getGridTemplateForRow(rowIndex: number): string {
+/**
+ * Get grid template for a keyboard row
+ * @param rowIndex - Row index (0-4)
+ * @param _layoutName - Name of the layout (for future customization)
+ * @returns CSS grid template string
+ */
+function getGridTemplateForRow(rowIndex: number, _layoutName: string): string {
   const u = 'minmax(3.4rem, 3.4rem)';
+
+  // Both Remington GAIL and INSCRIPT use the same physical keyboard layout
+  // Future layouts may override this with custom templates
+  // The _layoutName parameter is prefixed with underscore to indicate it's reserved for future use
 
   switch (rowIndex) {
     // NUMBER ROW
@@ -120,6 +131,9 @@ function getGridTemplateForRow(rowIndex: number): string {
         minmax(4.25rem, 4.25rem)
         minmax(4.25rem, 4.25rem)
       `;
+
+    default:
+      return '';
   }
 }
 

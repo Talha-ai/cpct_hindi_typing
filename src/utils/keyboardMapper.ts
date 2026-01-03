@@ -1,10 +1,14 @@
 /**
  * Keyboard mapping utility functions
  * Handles conversion between physical keys and Hindi characters
+ *
+ * IMPORTANT: Components should use the useKeyboardMapper() hook instead of
+ * calling these functions directly, to ensure they use the current layout from context.
  */
 
 import { ModifierState, KeyMapping } from '@/types/keyboard.types';
 import { KEY_MAP, REMINGTON_GAIL_LAYOUT } from '@/data/keyboardMappings';
+import { useKeyboardLayout } from '@/contexts/KeyboardLayoutContext';
 
 /**
  * Get the character output for a given key and modifier state
@@ -208,4 +212,196 @@ export function isValidKeyCombination(
 ): boolean {
   const character = getCharacterForKey(key, modifierState);
   return character !== '';
+}
+
+/**
+ * useKeyboardMapper Hook - Context-Aware Keyboard Mapping Utilities
+ *
+ * This hook provides all keyboard mapping utilities bound to the current layout from context.
+ * Use this hook in components instead of calling standalone functions directly.
+ *
+ * @example
+ * ```tsx
+ * function MyComponent() {
+ *   const mapper = useKeyboardMapper();
+ *   const char = mapper.getCharacterForKey('KeyA', 'normal');
+ *   const results = mapper.findKeysForCharacter('क');
+ *   return <div>{char}</div>;
+ * }
+ * ```
+ */
+export function useKeyboardMapper() {
+  const { currentLayout, keyMap } = useKeyboardLayout();
+
+  return {
+    /**
+     * Get the character output for a given key and modifier state
+     */
+    getCharacterForKey(
+      key: string,
+      modifierState: ModifierState = 'normal'
+    ): string {
+      const keyMapping = keyMap.get(key);
+      if (!keyMapping) return '';
+
+      switch (modifierState) {
+        case 'shift':
+          return keyMapping.shift;
+        case 'altgr':
+          return keyMapping.altgr;
+        case 'altgr-shift':
+          return keyMapping.altgrShift;
+        case 'normal':
+        default:
+          return keyMapping.normal;
+      }
+    },
+
+    /**
+     * Find the KeyMapping for a given physical key
+     */
+    findKeyMapping(key: string): KeyMapping | undefined {
+      return keyMap.get(key);
+    },
+
+    /**
+     * Determine the modifier state based on currently pressed keys
+     */
+    getModifierState(pressedKeys: Set<string>): ModifierState {
+      const hasShift =
+        pressedKeys.has('ShiftLeft') || pressedKeys.has('ShiftRight');
+      const hasAltGr = pressedKeys.has('AltRight');
+
+      if (hasShift && hasAltGr) {
+        return 'altgr-shift';
+      }
+      if (hasAltGr) {
+        return 'altgr';
+      }
+      if (hasShift) {
+        return 'shift';
+      }
+      return 'normal';
+    },
+
+    /**
+     * Check if a key code represents a typeable key
+     */
+    isTypeableKey(key: string): boolean {
+      if (isModifierKey(key)) return false;
+      if (
+        key === 'Backspace' ||
+        key === 'Enter' ||
+        key === 'Tab' ||
+        key === 'Escape'
+      ) {
+        return false;
+      }
+      return keyMap.has(key);
+    },
+
+    /**
+     * Get all characters that can be typed with a given physical key
+     */
+    getAllCharactersForKey(key: string): string[] {
+      const keyMapping = keyMap.get(key);
+      if (!keyMapping) return [];
+
+      return [
+        keyMapping.normal,
+        keyMapping.shift,
+        keyMapping.altgr,
+        keyMapping.altgrShift,
+      ].filter((char) => char !== '');
+    },
+
+    /**
+     * Find which key(s) and modifier state(s) produce a given character
+     */
+    findKeysForCharacter(
+      character: string
+    ): Array<{
+      key: string;
+      modifierState: ModifierState;
+      keyMapping: KeyMapping;
+    }> {
+      const results: Array<{
+        key: string;
+        modifierState: ModifierState;
+        keyMapping: KeyMapping;
+      }> = [];
+
+      for (const keyMapping of keyMap.values()) {
+        if (keyMapping.normal === character) {
+          results.push({
+            key: keyMapping.key,
+            modifierState: 'normal',
+            keyMapping,
+          });
+        }
+        if (keyMapping.shift === character) {
+          results.push({
+            key: keyMapping.key,
+            modifierState: 'shift',
+            keyMapping,
+          });
+        }
+        if (keyMapping.altgr === character) {
+          results.push({
+            key: keyMapping.key,
+            modifierState: 'altgr',
+            keyMapping,
+          });
+        }
+        if (keyMapping.altgrShift === character) {
+          results.push({
+            key: keyMapping.key,
+            modifierState: 'altgr-shift',
+            keyMapping,
+          });
+        }
+      }
+
+      return results;
+    },
+
+    /**
+     * Get the row index for a given key
+     */
+    getKeyRow(key: string): number {
+      for (let i = 0; i < currentLayout.rows.length; i++) {
+        if (currentLayout.rows[i].some((k) => k.key === key)) {
+          return i;
+        }
+      }
+      return -1;
+    },
+
+    /**
+     * Get all keys in a specific row
+     */
+    getKeysInRow(rowIndex: number): KeyMapping[] {
+      if (rowIndex < 0 || rowIndex >= currentLayout.rows.length) {
+        return [];
+      }
+      return currentLayout.rows[rowIndex];
+    },
+
+    /**
+     * Validate if a key combination exists in the layout
+     */
+    isValidKeyCombination(
+      key: string,
+      modifierState: ModifierState
+    ): boolean {
+      const character = this.getCharacterForKey(key, modifierState);
+      return character !== '';
+    },
+
+    /** Reference to current layout */
+    currentLayout,
+
+    /** Reference to current keyMap */
+    keyMap,
+  };
 }

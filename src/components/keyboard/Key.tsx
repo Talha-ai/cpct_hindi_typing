@@ -5,7 +5,6 @@
  */
 
 import { KeyMapping, ModifierState } from '@/types/keyboard.types';
-import { getCharacterForKey } from '@/utils/keyboardMapper';
 import { cn } from '@/utils/cn';
 
 interface KeyProps {
@@ -37,7 +36,20 @@ export function Key({
   isNext = false,
   showFingerGuide = false,
 }: KeyProps) {
-  const displayChar = getCharacterForKey(mapping.key, modifierState);
+  // Get the character directly from the mapping based on current modifier state
+  const displayChar = (() => {
+    switch (modifierState) {
+      case 'shift':
+        return mapping.shift;
+      case 'altgr':
+        return mapping.altgr;
+      case 'altgr-shift':
+        return mapping.altgrShift;
+      case 'normal':
+      default:
+        return mapping.normal;
+    }
+  })();
   const fingerColor = FINGER_COLORS[mapping.finger];
 
   // Get English key label (remove 'Key' prefix, handle special keys)

@@ -1,14 +1,17 @@
 import { useState } from 'react';
 import { useTypingEngine } from './hooks';
 import { useKeyPress } from './hooks/useKeyPress';
-import { formatTime } from './utils/statsCalculator';
 import { VirtualKeyboard } from './components/keyboard';
-import { findKeysForCharacter } from './utils/keyboardMapper';
+import { useKeyboardMapper } from './utils/keyboardMapper';
+import { LayoutSelector } from './components/LayoutSelector';
 
 function App() {
   const targetText = 'यह एक परीक्षण है'; // "This is a test"
-  const [showFingerGuide, setShowFingerGuide] = useState(true);
-  const [showHandGuide, setShowHandGuide] = useState(true);
+  const [showFingerGuide] = useState(false);
+  const [showHandGuide] = useState(true);
+
+  // 🔹 Use context-aware keyboard mapper
+  const mapper = useKeyboardMapper();
 
   // 🔹 Keyboard hook (SINGLE SOURCE OF TRUTH)
   const keyPress = useKeyPress({ enabled: true });
@@ -18,7 +21,6 @@ function App() {
     currentIndex,
     errors,
     currentStats,
-    timeElapsed,
     isCompleted,
     reset,
     modifierState,
@@ -37,9 +39,9 @@ function App() {
   const nextChar = targetText[currentIndex];
 
   const nextKeyInfo = nextChar
-    ? findKeysForCharacter(nextChar).find(
+    ? mapper.findKeysForCharacter(nextChar).find(
         (k) => k.modifierState === modifierState
-      ) || findKeysForCharacter(nextChar)[0]
+      ) || mapper.findKeysForCharacter(nextChar)[0]
     : undefined;
 
   const nextKeyMapping = nextKeyInfo?.keyMapping;
@@ -52,15 +54,18 @@ function App() {
           <h1 className="text-5xl font-bold mb-3 pt-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             हिंदी टाइपिंग प्लेटफॉर्म
           </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-400">
+          <p className="text-xl text-gray-600 dark:text-gray-400 mb-4">
             Learn Hindi Typing with Interactive Keyboard Guide
           </p>
+
+          {/* Layout Selector */}
+          <LayoutSelector />
         </header>
 
         {/* Main Content - Single Column Centered Layout */}
         <div className="max-w-5xl mx-auto space-y-8">
           {/* Stats Bar */}
-          <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+          {/* <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700">
             <div className="grid grid-cols-4 gap-4 text-center">
               <div>
                 <p className="text-xs text-gray-600 dark:text-gray-400">WPM</p>
@@ -89,7 +94,7 @@ function App() {
                 </p>
               </div>
             </div>
-          </div>
+          </div> */}
 
           {/* Text to Type - Simple boxes */}
           <div className="text-center mb-8">
@@ -189,7 +194,6 @@ function App() {
               pressedKeys={pressedKeys}
               nextCharacter={nextChar}
               showFingerGuide={showFingerGuide}
-              size="normal"
             />
 
             {/* Right Hand - Always show when hand guide is enabled */}
@@ -239,26 +243,26 @@ function App() {
           </div>
 
           {/* Controls */}
-          <div className="flex gap-4 justify-center">
+          {/* <div className="flex gap-4 justify-center">
             <button
               onClick={reset}
               className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold"
             >
               Reset
-            </button>
-            {/* <button
+            </button> */}
+          {/* <button
               onClick={() => setShowFingerGuide(!showFingerGuide)}
               className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded font-semibold"
             >
               {showFingerGuide ? 'Hide' : 'Show'} Finger Colors
             </button> */}
-            <button
+          {/* <button
               onClick={() => setShowHandGuide(!showHandGuide)}
               className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded font-semibold"
             >
               {showHandGuide ? 'Hide' : 'Show'} Hands
             </button>
-          </div>
+          </div> */}
 
           {/* Completion Message */}
           {isCompleted && (

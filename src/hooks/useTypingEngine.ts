@@ -6,14 +6,13 @@
  */
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { useKeyPress } from './useKeyPress';
 import { useTimer } from './useTimer';
 import {
   ModifierState,
   TypingStats,
   KeystrokeData,
 } from '@/types/keyboard.types';
-import { getCharacterForKey, isTypeableKey } from '@/utils/keyboardMapper';
+import { useKeyboardMapper } from '@/utils/keyboardMapper';
 import { compareHindiChars, normalizeHindiText } from '@/utils/hindiUtils';
 import { calculateDetailedStats } from '@/utils/statsCalculator';
 
@@ -95,6 +94,9 @@ export function useTypingEngine({
     setOnKeyPress: (fn: (key: string, m: ModifierState) => void) => void;
   };
 }) {
+  // 🔹 Use context-aware keyboard mapper
+  const mapper = useKeyboardMapper();
+
   const normalizedTarget = useMemo(
     () => normalizeHindiText(targetText),
     [targetText]
@@ -131,14 +133,14 @@ export function useTypingEngine({
 
   const handleKeyPress = useCallback(
     (key: string, modifiers: ModifierState) => {
-      if (!isTypeableKey(key) || isCompleted) return;
+      if (!mapper.isTypeableKey(key) || isCompleted) return;
 
       if (!isActive) {
         setIsActive(true);
         timer.start();
       }
 
-      const char = getCharacterForKey(key, modifiers);
+      const char = mapper.getCharacterForKey(key, modifiers);
       if (!char) return;
 
       const expected = normalizedTarget[currentIndex];
@@ -154,7 +156,7 @@ export function useTypingEngine({
         setTimeout(finish, 50);
       }
     },
-    [currentIndex, normalizedTarget, isCompleted, isActive, timer, finish]
+    [currentIndex, normalizedTarget, isCompleted, isActive, timer, finish, mapper]
   );
 
   // 🔹 Wire keyboard → engine
